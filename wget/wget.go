@@ -1,4 +1,4 @@
-package wget
+package main
 
 import (
 	"context"
@@ -43,36 +43,36 @@ func parseURL(link string) (string, error) {
 	return link, nil
 }
 
-func Execute() {
-	wg := &sync.WaitGroup{}
-	var linksList []string
-	dm := NewDownloadManager()
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+func main() {
 
+	var linksList []string
 	// parsing urls
 	// if correct, adding them to slice
 	// else print error
 	for _, inputLink := range os.Args[1:] {
-		err := ParseURL(inputLink)
+		parsedLink, err := parseURL(inputLink)
 		if err == nil {
-			linksList = append(linksList, inputLink)
+			linksList = append(linksList, parsedLink)
 		} else {
-			fmt.Fprintf(os.Stderr, "wget: error parsing url: %v\n", err)
+			fmt.Fprintf(os.Stderr, "wget: error parsing url %v: %v\n", inputLink, err)
 		}
 	}
 
-	// locking map here
-	dm.fileListLock.Lock()
-	for _, link := range linksList {
-		dm.fileList[link] = &File{}
-		dm.fileListOrder = append(dm.fileListOrder, link)
-		wg.Add(1)
-		go dm.Download(link, wg)
-	}
-	dm.fileListLock.Unlock()
+	var fileList []*File
+	wg := &sync.WaitGroup{}
 
-	go dm.Print(ctx)
+	for _, link := range linksList {
+		file := &File{}
+		fileList = append(fileList, file)
+		wg.Add(1)
+		go file.Download(link, wg)
+	}
+
+	// we use it to wait until the last print function call will be terminated correctly
+	printFinishedCh := make(chan struct{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go Print(ctx, fileList, printFinishedCh)
 
 	// waiting for all download goroutines
 	// to finish their work
@@ -81,7 +81,7 @@ func Execute() {
 	// to return
 	cancel()
 	// ensure that last print will finish correctly
-	dm.WaitPrintEnd()
+	<-printFinishedCh
 	fmt.Println()
 }
 
