@@ -88,20 +88,19 @@ func Execute() {
 // Print uses context with select
 // and fileListOrder slice to prevent random
 // print order of map fields during iteration
-func (dm *DownloadManager) Print(ctx context.Context) {
-	defer close(dm.printFinishedCh)
+func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{}) {
+	defer close(printFinishedCh)
 
 	print := func() {
 		fmt.Print("\r")
-		dm.fileListLock.Lock()
-		for _, key := range dm.fileListOrder {
-			if dm.fileList[key].totalSize != 0 {
-				fmt.Printf("%.2f %% ", float64(dm.fileList[key].counter)/float64(dm.fileList[key].totalSize)*100)
+		for _, file := range fileList {
+			if file.totalSize != 0 {
+				percentage := float64(file.counter) / float64(file.totalSize) * 100
+				fmt.Printf("%.2f %% ", percentage)
 			} else {
 				fmt.Print("0.00 %% ")
 			}
 		}
-		dm.fileListLock.Unlock()
 	}
 
 	for {
