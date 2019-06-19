@@ -16,31 +16,19 @@ import (
 // File represents infromation about file
 // we are going to download
 type File struct {
-	io.Reader       // To implement Reader interface
+	io.Reader // To implement Reader interface
+	name      string
 	totalSize int64 // Total content size in bytes
 	counter   int64 // Total # of bytes transferred
 }
 
-type DownloadManager struct {
-	fileList        map[string]*File // key = link
-	fileListOrder   []string         // to order fileList map iteration
-	fileListLock    sync.Mutex       // to prevent race
-	printFinishedCh chan struct{}    // we use it to wait until last print fucntion will be terminated correctly
-}
-
-// NewDownloadManager is construct function
-func NewDownloadManager() *DownloadManager {
-	return &DownloadManager{
-		fileList:        make(map[string]*File),
-		fileListOrder:   make([]string, 0),
-		printFinishedCh: make(chan struct{}),
-	}
-}
-
-func ParseURL(link string) error {
+// parseURL takes string value link that must be a link,
+// parses it and returns the same link with nil error if all is ok
+// and empty string with corresponding error if something is wrong
+func parseURL(link string) (string, error) {
 	_, err := url.ParseRequestURI(link)
 	if err != nil {
-		return err
+		return "", err
 	}
 	resp, err := http.Get(link)
 	if err != nil {
@@ -52,7 +40,7 @@ func ParseURL(link string) error {
 	if err != nil {
 		return "", fmt.Errorf("wget: content length = %v :%v", bodySize, err)
 	}
-	return nil
+	return link, nil
 }
 
 func Execute() {
