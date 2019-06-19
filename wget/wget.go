@@ -22,7 +22,7 @@ type File struct {
 	counter   int64 // Total # of bytes transferred
 }
 
-// parseURL takes string value link that must be a link,
+// parseURL takes string value link that must be a correct URL,
 // parses it and returns the same link with nil error if all is ok
 // and empty string with corresponding error if something is wrong
 func parseURL(link string) (string, error) {
@@ -59,6 +59,7 @@ func main() {
 	}
 
 	var fileList []*File
+	// creating WaitGroup for download goroutines
 	wg := &sync.WaitGroup{}
 
 	for _, link := range linksList {
@@ -68,9 +69,11 @@ func main() {
 		go file.Download(link, wg)
 	}
 
-	// we use it to wait until the last print function call will be terminated correctly
+	// we use channel to wait until the last
+	// Print function call will be terminated correctly
 	printFinishedCh := make(chan struct{})
-
+	// creating context variable in order to stop Print func
+	// exactly in time we need it to be stopped
 	ctx, cancel := context.WithCancel(context.Background())
 	go Print(ctx, fileList, printFinishedCh)
 
@@ -85,9 +88,9 @@ func main() {
 	fmt.Println()
 }
 
-// Print uses context with select
-// and fileListOrder slice to prevent random
-// print order of map fields during iteration
+// Print iterates over given slice of Files, computes
+// percentages of download of all Files and shows them in stdout
+// in pseudo-table format until ctx.Done() call
 func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{}) {
 	defer close(printFinishedCh)
 
@@ -115,6 +118,9 @@ func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{})
 	}
 }
 
+// Download tries to download file from remote address using
+// given url. Takes WaitGroup pointer to provide parallelism.
+// Prints error to os.Stderr and return if something goes wrong.
 func (file *File) Download(link string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := http.Get(link)
@@ -159,10 +165,10 @@ func (file *File) Download(link string, wg *sync.WaitGroup) {
 // Read 'overrides' the underlying io.Reader's Read method.
 // This is the one that will be called by io.Copy(). We simply
 // use it to keep track of byte counts and then forward the call.
-func (pt *File) Read(p []byte) (int, error) {
-	n, err := pt.Reader.Read(p)
+func (file *File) Read(p []byte) (int, error) {
+	n, err := file.Reader.Read(p)
 	if err == nil {
-		pt.counter += int64(n)
+		file.counter += int64(n)
 	}
 
 	return n, err
