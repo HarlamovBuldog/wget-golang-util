@@ -44,15 +44,13 @@ func ParseURL(link string) error {
 	}
 	resp, err := http.Get(link)
 	if err != nil {
-		return fmt.Errorf("wget: error connecting url :%v", err)
-		//fmt.Fprintf(os.Stderr, "wget: error connecting url :%v\n", err)
+		return "", fmt.Errorf("wget: error connecting url :%v", err)
 	}
 	defer resp.Body.Close()
 
 	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
 	if err != nil {
-		return fmt.Errorf("wget: content length = %v :%v", bodySize, err)
-		//fmt.Fprintf(os.Stderr, "wget: error getting content length :%v\n", err)
+		return "", fmt.Errorf("wget: content length = %v :%v", bodySize, err)
 	}
 	return nil
 }
@@ -142,7 +140,6 @@ func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := http.Get(link)
 	if err != nil {
-		//return false, 0, fmt.Errorf("wget: error connecting url :%v", err)
 		fmt.Fprintf(os.Stderr, "wget: error connecting url :%v\n", err)
 		return
 	}
@@ -150,7 +147,6 @@ func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
 
 	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
 	if err != nil {
-		//return false, 0, fmt.Errorf("wget: error getting content length :%v", err)
 		fmt.Fprintf(os.Stderr, "wget: error getting content length :%v\n", err)
 		return
 	}
@@ -160,7 +156,6 @@ func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
 
 	f, err := os.Create(local)
 	if err != nil {
-		//return false, 0, fmt.Errorf("wget: error creating file :%v", err)
 		fmt.Fprintf(os.Stderr, "wget: error creating file :%v\n", err)
 		return
 	}
@@ -181,12 +176,9 @@ func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
 	}
 
 	if err := f.Close(); err != nil {
-		//return false, int(bytes), fmt.Errorf("wget: error closing file %s: %v", f.Name(), err)
 		fmt.Fprintf(os.Stderr, "wget: error closing file %s: %v\n", f.Name(), err)
 		return
 	}
-
-	//return true, int(bytes), nil
 }
 
 // Read 'overrides' the underlying io.Reader's Read method.
