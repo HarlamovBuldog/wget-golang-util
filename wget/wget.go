@@ -116,15 +116,7 @@ func (dm *DownloadManager) Print(ctx context.Context) {
 	}
 }
 
-// WaitPrintEnd helps us to be sure that
-// last call of Print function will be executed
-// before main gourutine ends
-func (dm *DownloadManager) WaitPrintEnd() {
-	<-dm.printFinishedCh
-	return
-}
-
-func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
+func (file *File) Download(link string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := http.Get(link)
 	if err != nil {
@@ -140,25 +132,21 @@ func (dm *DownloadManager) Download(link string, wg *sync.WaitGroup) {
 	}
 
 	//get filename from URL
-	local := path.Base(resp.Request.URL.Path)
+	fileNameToSave := path.Base(resp.Request.URL.Path)
 
-	f, err := os.Create(local)
+	f, err := os.Create(fileNameToSave)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "wget: error creating file :%v\n", err)
 		return
 	}
 
-	// locking map
-	dm.fileListLock.Lock()
-	file := dm.fileList[link]
+	file.name = fileNameToSave
 	file.Reader = resp.Body
 	file.totalSize = bodySize
-	dm.fileListLock.Unlock()
 
 	// Copy need to be changed to Tee.Reader
 	_, err1 := io.Copy(f, file)
 	if err1 != nil {
-		//return false, 0, fmt.Errorf("wget: error reading from %s: %v", link, err)
 		fmt.Fprintf(os.Stderr, "wget: error reading from %s: %v\n", link, err1)
 		return
 	}
