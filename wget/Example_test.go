@@ -1,4 +1,4 @@
-package wget
+package main
 
 import (
 	"fmt"
@@ -9,8 +9,6 @@ import (
 )
 
 func TestDownload(t *testing.T) {
-	wg := &sync.WaitGroup{}
-	dm := NewDownloadManager()
 
 	var tests = []struct {
 		inputLink string
@@ -24,31 +22,44 @@ func TestDownload(t *testing.T) {
 		{"https://wordpress.org/wordpress-4.4.2.zip", true},
 	}
 
+	wg := &sync.WaitGroup{}
+	var fileList []*File
+
 	for _, test := range tests {
+		file := &File{}
+		fileList = append(fileList, file)
 		wg.Add(1)
-		dm.fileList[test.inputLink] = &File{}
-		go dm.Download(test.inputLink, wg)
+		go file.Download(test.inputLink, wg)
 	}
 	wg.Wait()
 
 	for _, test := range tests {
 		link := test.inputLink
-		got, err := WasFileDownloaded(link, dm.fileList[link].totalSize)
+		//get filename from URL
+		fileNameFromURL := path.Base(link)
+
+		var wantTotalSize int64
+		for i := range fileList {
+			if fileList[i].name == fileNameFromURL {
+				wantTotalSize = fileList[i].totalSize
+				break
+			}
+		}
+
+		got, err := fileDownloaded(fileNameFromURL, wantTotalSize)
 		if got != test.want {
-			t.Errorf("Download(%q) = %v : %v", test.inputLink, got, err.Error())
+			t.Errorf("Download(%q) = %v : %v", link, got, err.Error())
 		}
 	}
 }
 
-func WasFileDownloaded(link string, totalSizeURL int64) (bool, error) {
-	//get filename from URL
-	fileName := path.Base(link)
+func fileDownloaded(fileName string, wantTotalSize int64) (bool, error) {
 	file, err := os.Stat(fileName)
 	if err != nil {
 		return false, fmt.Errorf("%s: %v", fileName, err)
 	}
 
-	if file.Size() != totalSizeURL {
+	if file.Size() != wantTotalSize {
 		return false, fmt.Errorf("%s: sizes are not the same", fileName)
 	}
 
