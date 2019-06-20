@@ -23,13 +23,18 @@ func TestDownload(t *testing.T) {
 	}
 
 	wg := &sync.WaitGroup{}
-	var fileList []*File
+	var fileList []*file
 
 	for _, test := range tests {
-		file := &File{}
-		fileList = append(fileList, file)
-		wg.Add(1)
-		go file.Download(test.inputLink, wg)
+		parsedLink, bodySize, err := parseURL(test.inputLink)
+		if err == nil {
+			file := &file{totalSize: bodySize}
+			fileList = append(fileList, file)
+			wg.Add(1)
+			go file.download(parsedLink, wg)
+		} else {
+			t.Logf("wget: error parsing url %v: %v\n", test.inputLink, err)
+		}
 	}
 	wg.Wait()
 
