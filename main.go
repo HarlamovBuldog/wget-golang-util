@@ -24,28 +24,22 @@ type file struct {
 
 func main() {
 
-	var linksList []string
+	var fileList []*file
+	// creating WaitGroup for download goroutines
+	wg := &sync.WaitGroup{}
 	// parsing urls
 	// if correct, adding them to slice
 	// else print error
 	for _, inputLink := range os.Args[1:] {
-		parsedLink, err := parseURL(inputLink)
+		parsedLink, bodySize, err := parseURL(inputLink)
 		if err == nil {
-			linksList = append(linksList, parsedLink)
+			file := &file{totalSize: bodySize}
+			fileList = append(fileList, file)
+			wg.Add(1)
+			go file.download(parsedLink, wg)
 		} else {
 			fmt.Fprintf(os.Stderr, "wget: error parsing url %v: %v\n", inputLink, err)
 		}
-	}
-
-	var fileList []*File
-	// creating WaitGroup for download goroutines
-	wg := &sync.WaitGroup{}
-
-	for _, link := range linksList {
-		file := &File{}
-		fileList = append(fileList, file)
-		wg.Add(1)
-		go file.Download(link, wg)
 	}
 
 	// we use channel to wait until the last
@@ -54,7 +48,7 @@ func main() {
 	// creating context variable in order to stop Print func
 	// exactly in time we need it to be stopped
 	ctx, cancel := context.WithCancel(context.Background())
-	go Print(ctx, fileList, printFinishedCh)
+	go print(ctx, fileList, printFinishedCh)
 
 	// waiting for all download goroutines
 	// to finish their work
