@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -38,7 +39,7 @@ func main() {
 			wg.Add(1)
 			go file.download(parsedLink, wg)
 		} else {
-			fmt.Fprintf(os.Stderr, "wget: error parsing url %v: %v\n", inputLink, err)
+			log.Printf("wget: error parsing url %v: %v\n", inputLink, err)
 		}
 	}
 
@@ -68,7 +69,7 @@ func (file *file) download(link string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := http.Get(link)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "wget: error connecting url :%v\n", err)
+		log.Printf("wget: error connecting url :%v\n", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -78,7 +79,7 @@ func (file *file) download(link string, wg *sync.WaitGroup) {
 
 	f, err := os.Create(fileNameToSave)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "wget: error creating file :%v\n", err)
+		log.Printf("wget: error creating file :%v\n", err)
 		return
 	}
 
@@ -88,12 +89,12 @@ func (file *file) download(link string, wg *sync.WaitGroup) {
 	// Copy need to be changed to Tee.Reader
 	_, err = io.Copy(f, file)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "wget: error reading from %s: %v\n", link, err)
+		log.Printf("wget: error reading from %s: %v\n", link, err)
 		return
 	}
 
 	if err := f.Close(); err != nil {
-		fmt.Fprintf(os.Stderr, "wget: error closing file %s: %v\n", f.Name(), err)
+		log.Printf("wget: error closing file %s: %v\n", f.Name(), err)
 		return
 	}
 }
@@ -116,12 +117,14 @@ func print(ctx context.Context, fileList []*file, printFinishedCh chan struct{})
 		}
 	}
 
+	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			print()
 			return
-		default:
+		case <-t.C:
 			print()
 			time.Sleep(100 * time.Millisecond)
 		}
