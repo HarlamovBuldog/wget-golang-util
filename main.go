@@ -22,27 +22,6 @@ type File struct {
 	counter   int64 // Total # of bytes transferred
 }
 
-// parseURL takes string value link that must be a correct URL,
-// parses it and returns the same link with nil error if all is ok
-// and empty string with corresponding error if something is wrong
-func parseURL(link string) (string, error) {
-	_, err := url.ParseRequestURI(link)
-	if err != nil {
-		return "", err
-	}
-	resp, err := http.Get(link)
-	if err != nil {
-		return "", fmt.Errorf("wget: error connecting url :%v", err)
-	}
-	defer resp.Body.Close()
-
-	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
-	if err != nil {
-		return "", fmt.Errorf("wget: content length = %v :%v", bodySize, err)
-	}
-	return link, nil
-}
-
 func main() {
 
 	var linksList []string
@@ -88,36 +67,6 @@ func main() {
 	fmt.Println()
 }
 
-// Print iterates over given slice of Files, computes
-// percentages of download of all Files and shows them in stdout
-// in pseudo-table format until ctx.Done() call
-func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{}) {
-	defer close(printFinishedCh)
-
-	print := func() {
-		fmt.Print("\r")
-		for _, file := range fileList {
-			if file.totalSize != 0 {
-				percentage := float64(file.counter) / float64(file.totalSize) * 100
-				fmt.Printf("%.2f %% ", percentage)
-			} else {
-				fmt.Print("0.00 %% ")
-			}
-		}
-	}
-
-	for {
-		select {
-		case <-ctx.Done():
-			print()
-			return
-		default:
-			print()
-			time.Sleep(100 * time.Millisecond)
-		}
-	}
-}
-
 // Download tries to download file from remote address using
 // given url. Takes WaitGroup pointer to provide parallelism.
 // Prints error to os.Stderr and return if something goes wrong.
@@ -160,6 +109,57 @@ func (file *File) Download(link string, wg *sync.WaitGroup) {
 		fmt.Fprintf(os.Stderr, "wget: error closing file %s: %v\n", f.Name(), err)
 		return
 	}
+}
+
+// Print iterates over given slice of Files, computes
+// percentages of download of all Files and shows them in stdout
+// in pseudo-table format until ctx.Done() call
+func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{}) {
+	defer close(printFinishedCh)
+
+	print := func() {
+		fmt.Print("\r")
+		for _, file := range fileList {
+			if file.totalSize != 0 {
+				percentage := float64(file.counter) / float64(file.totalSize) * 100
+				fmt.Printf("%.2f %% ", percentage)
+			} else {
+				fmt.Print("0.00 %% ")
+			}
+		}
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			print()
+			return
+		default:
+			print()
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+}
+
+// parseURL takes string value link that must be a correct URL,
+// parses it and returns the same link with nil error if all is ok
+// and empty string with corresponding error if something is wrong
+func parseURL(link string) (string, error) {
+	_, err := url.ParseRequestURI(link)
+	if err != nil {
+		return "", err
+	}
+	resp, err := http.Get(link)
+	if err != nil {
+		return "", fmt.Errorf("wget: error connecting url :%v", err)
+	}
+	defer resp.Body.Close()
+
+	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
+	if err != nil {
+		return "", fmt.Errorf("wget: content length = %v :%v", bodySize, err)
+	}
+	return link, nil
 }
 
 // Read 'overrides' the underlying io.Reader's Read method.
