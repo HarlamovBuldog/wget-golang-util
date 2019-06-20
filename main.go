@@ -15,7 +15,7 @@ import (
 
 // File represents infromation about file
 // we are going to download
-type File struct {
+type file struct {
 	io.Reader // To implement Reader interface
 	name      string
 	totalSize int64 // Total content size in bytes
@@ -70,7 +70,7 @@ func main() {
 // Download tries to download file from remote address using
 // given url. Takes WaitGroup pointer to provide parallelism.
 // Prints error to os.Stderr and return if something goes wrong.
-func (file *File) Download(link string, wg *sync.WaitGroup) {
+func (file *file) download(link string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	resp, err := http.Get(link)
 	if err != nil {
@@ -114,7 +114,7 @@ func (file *File) Download(link string, wg *sync.WaitGroup) {
 // Print iterates over given slice of Files, computes
 // percentages of download of all Files and shows them in stdout
 // in pseudo-table format until ctx.Done() call
-func Print(ctx context.Context, fileList []*File, printFinishedCh chan struct{}) {
+func print(ctx context.Context, fileList []*file, printFinishedCh chan struct{}) {
 	defer close(printFinishedCh)
 
 	print := func() {
@@ -165,7 +165,7 @@ func parseURL(link string) (string, error) {
 // Read 'overrides' the underlying io.Reader's Read method.
 // This is the one that will be called by io.Copy(). We simply
 // use it to keep track of byte counts and then forward the call.
-func (file *File) Read(p []byte) (int, error) {
+func (file *file) Read(p []byte) (int, error) {
 	n, err := file.Reader.Read(p)
 	if err == nil {
 		file.counter += int64(n)
