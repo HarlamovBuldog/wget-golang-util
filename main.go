@@ -73,12 +73,6 @@ func (file *file) download(link string, wg *sync.WaitGroup) {
 	}
 	defer resp.Body.Close()
 
-	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "wget: error getting content length :%v\n", err)
-		return
-	}
-
 	//get filename from URL
 	fileNameToSave := path.Base(resp.Request.URL.Path)
 
@@ -90,12 +84,11 @@ func (file *file) download(link string, wg *sync.WaitGroup) {
 
 	file.name = fileNameToSave
 	file.Reader = resp.Body
-	file.totalSize = bodySize
 
 	// Copy need to be changed to Tee.Reader
-	_, err1 := io.Copy(f, file)
-	if err1 != nil {
-		fmt.Fprintf(os.Stderr, "wget: error reading from %s: %v\n", link, err1)
+	_, err = io.Copy(f, file)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "wget: error reading from %s: %v\n", link, err)
 		return
 	}
 
