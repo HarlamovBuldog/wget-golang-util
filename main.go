@@ -142,24 +142,29 @@ func print(ctx context.Context, fileList []*file, printFinishedCh chan struct{})
 }
 
 // parseURL takes string value link that must be a correct URL,
-// parses it and returns the same link with nil error if all is ok
-// and empty string with corresponding error if something is wrong
-func parseURL(link string) (string, error) {
-	_, err := url.ParseRequestURI(link)
+// parses it and tries to get content-length
+// it returns the same link with bodySize and nil error if all is ok
+// and empty string with 0 bodySize and corresponding error if something is wrong
+func parseURL(link string) (parsedLink string, bodySize int64, err error) {
+	_, err = url.ParseRequestURI(link)
 	if err != nil {
-		return "", err
+		return
 	}
 	resp, err := http.Get(link)
 	if err != nil {
-		return "", fmt.Errorf("wget: error connecting url :%v", err)
+		err = fmt.Errorf("wget: error connecting url :%v", err)
+		return
 	}
 	defer resp.Body.Close()
 
-	bodySize, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
+	bodySize, err = strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 0)
 	if err != nil {
-		return "", fmt.Errorf("wget: content length = %v :%v", bodySize, err)
+		err = fmt.Errorf("wget: content length = %v :%v", bodySize, err)
+		return
 	}
-	return link, nil
+
+	parsedLink = link
+	return
 }
 
 // Read 'overrides' the underlying io.Reader's Read method.
