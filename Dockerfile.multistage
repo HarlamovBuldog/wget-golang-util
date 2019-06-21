@@ -1,0 +1,24 @@
+# Start from golang v1.10.4 base image
+FROM golang:1.10.4 as builder
+# Workdir is path in your docker image from where all your commands will be executed
+WORKDIR /go/src/app
+# Copy all from your project inside workdir of docker image
+COPY . .
+# Download dependencies
+RUN go get -d -v ./...
+# Install the package
+RUN go install -v ./...
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/app .
+
+######## Start a new stage from scratch #######
+FROM alpine:latest  
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /go/bin/app .
+# Starting bundled binary file
+CMD [ "sh", "-c", "./app https://dev.1c-bitrix.ru/examples/3_type.zip sfafasfafas https://wordpress.org/wordpress-4.4.2.zip https://wordpress.org/latest.zip" ]
