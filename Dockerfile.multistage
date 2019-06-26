@@ -9,7 +9,7 @@ COPY . .
 # Build the Go app.
 # Path for resulting files is configured by -o tag 
 # Rusulting files will be inside /go/bin/wget-golang-util
-RUN go build -o /go/bin/wget-golang-util .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/wget-golang-util .
 
 # Start a new build stage
 FROM scratch
