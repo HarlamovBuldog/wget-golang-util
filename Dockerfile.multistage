@@ -1,5 +1,8 @@
 FROM golang:1.12 as builder
 
+RUN apk update
+RUN apk add ca-certificates
+
 # Workdir is path in your docker image from where all your commands will be executed
 WORKDIR /go/src/github.com/HarlamovBuldog/wget-golang-util
 
@@ -14,7 +17,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /go/bin/wget-gola
 # Start a new build stage
 FROM scratch
 
-WORKDIR /root/
+# Copy sertificates from previous stage in order to make download from web work
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 # Copy the Pre-built binary file from the previous stage to /root/
 COPY --from=builder /go/bin/wget-golang-util .
