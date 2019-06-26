@@ -1,4 +1,4 @@
-FROM golang:1.12 as builder
+FROM golang:alpine as builder
 
 RUN apk update
 RUN apk add ca-certificates
@@ -20,8 +20,8 @@ FROM scratch
 # Copy sertificates from previous stage in order to make download from web work
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy the Pre-built binary file from the previous stage to /root/
-COPY --from=builder /go/bin/wget-golang-util .
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /go/bin/wget-golang-util main
 
 # Starting bash
 CMD [ "/bin/sh" ]
