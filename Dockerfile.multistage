@@ -23,5 +23,5 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy the Pre-built binary file from the previous stage
 COPY --from=builder /go/bin/wget-golang-util main
 
-# Starting bash
-CMD [ "/bin/sh" ]
+# Starting bash  
+ENTRYPOINT ["./main"]
