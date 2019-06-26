@@ -1,0 +1,58 @@
+version: 2.1
+
+executors:
+  my-executor:
+    environment: 
+      IMAGE_NAME: vladwoode/wget-golang-util
+    docker:
+      - image: circleci/golang:1.12
+    working_directory: /go/src/github.com/HarlamovBuldog/wget-golang-util
+
+jobs:
+  build:
+    executor: my-executor
+    steps:
+      - checkout
+      - run: go build
+  test:
+    executor: my-executor
+    steps:
+      - checkout
+      - run: go test
+  create-push-docker-image:
+    executor: my-executor
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Build Docker image
+          command: |
+            IMAGE_TAG=${CIRCLE_TAG/v/''}
+            docker build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile.multistage .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            IMAGE_TAG=${CIRCLE_TAG/v/''}
+            docker push $IMAGE_NAME:$IMAGE_TAG
+workflows:
+  version: 2.1
+  build-test:
+    jobs:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          filters:
+            tags:
+              only: /.*/
+      - create-push-docker-image:
+          requires:
+            - build
+            - test
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              ignore: /.*/
